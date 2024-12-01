@@ -37,12 +37,17 @@ input_keybd = InputDevice('/dev/input/event5')
 deferred_ev = queue.Queue()
 #deferred_ev = []
 
+btn_side_depressed = 0
+btn_extra_depressed = 0
+
 #----------------------------------------------------
 # (optional; comment out these lines if undesirable)
 # timeout (in seconds) for a mouse button-depressed event to be regarded a 'single-click' if no subsequent mouse event follows shortly after
-threshold = 0.213
 def single_click_timeout():
-	global deferred_ev, output_mouse
+	global deferred_ev, output_mouse, btn_side_depressed, btn_extra_depressed
+	hscroll_speed = 3
+	threshold = 0.213
+
 	while (True):
 		now = time()
 		# a mouse button-depressed action is actually comprised of a group of three events: EV_MSC, EV_KEY, EV_SYN
@@ -51,6 +56,17 @@ def single_click_timeout():
 			t = now - deferred_ev.queue[2].timestamp()
 #			print(t)
 			if (t > threshold): emit_all_deferred()
+
+		elif btn_side_depressed:
+			output_mouse.write(ec.EV_REL, ec.REL_HWHEEL, -hscroll_speed)
+			output_mouse.write(ec.EV_REL, ec.REL_HWHEEL_HI_RES, -120 * hscroll_speed)
+			output_mouse.syn()
+
+		elif btn_extra_depressed:
+			output_mouse.write(ec.EV_REL, ec.REL_HWHEEL, hscroll_speed)
+			output_mouse.write(ec.EV_REL, ec.REL_HWHEEL_HI_RES, 120 * hscroll_speed)
+			output_mouse.syn()
+
 		sleep(threshold / 4)
 Thread(target=single_click_timeout).start()
 
@@ -63,7 +79,6 @@ def emit_all_deferred():
 def clear_all_deferred():
 	global deferred_ev
 	with deferred_ev.mutex: deferred_ev.queue.clear()
-
 
 #----------------------------------------------------
 # we will handle all mouse events exclusively from now on
@@ -133,6 +148,16 @@ for event in input_mouse.read_loop():
 #		if deferred_ev: deferred_ev.append(event)
 		if not deferred_ev.empty(): deferred_ev.put(event)
 		if rb_depressed: continue
+
+	# wheel push left
+	elif (ec.EV_KEY == event.type) and (ec.BTN_SIDE == event.code):
+		btn_side_depressed = event.value
+		continue
+
+	# wheel push right
+	elif (ec.EV_KEY == event.type) and (ec.BTN_EXTRA == event.code):
+		btn_extra_depressed = event.value
+		continue
 
 	# no scroll intention --> execute all the deferred events, if any, plus the current one
 #	print('>>> OTHER:', 'EV_SYN' if event.type == ec.EV_SYN else event.type)
