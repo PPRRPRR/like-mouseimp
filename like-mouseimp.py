@@ -11,13 +11,8 @@
 #
 # Copyright (c) 2024 PPRRPRR (J.VV.)
 #
-# CREDITS: MouseImp is the original great work by Nezhelsky Oskar et al.
-# https://github.com/axxie/MouseImp
-#
-# REF: Input event codes:
-# https://www.kernel.org/doc/html/latest/input/event-codes.html
-# https://github.com/torvalds/linux/blob/master/include/uapi/linux/input.h
-#
+# CREDITS: MouseImp is the original great work by Nezhelsky Oskar and
+# Goffmann Svetozar.
 #################################################################################
 
 from evdev import InputDevice, UInput, ecodes as ec
